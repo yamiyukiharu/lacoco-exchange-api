@@ -1,14 +1,20 @@
+import { HttpModule } from '@nestjs/axios';
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { FefModule } from './fef/fef.module';
-import { TokensController } from './tokens/tokens.controller';
-import { TokenPriceProvider } from './token-price-provider/token-price-provider';
-import { CacheServiceService } from './cache-service/cache-service.service';
+import { TokenController } from './token/controllers/Token.controller';
+import { CoinGeckoPriceProvider } from './token/providers/CoinGeckoPrice.provider';
+import { ITokenPriceProvider } from './token/providers/ITokenPrice.provider';
+import { TokenService } from './token/services/Token.service';
 
 @Module({
-  imports: [FefModule],
-  controllers: [AppController, TokensController],
-  providers: [AppService, TokenPriceProvider, CacheServiceService],
+  imports: [CacheModule.register(), HttpModule],
+  controllers: [TokenController],
+  providers: [
+    TokenService,
+    {
+      provide: ITokenPriceProvider,
+      useClass: CoinGeckoPriceProvider,
+    },
+  ],
 })
 export class AppModule {}
