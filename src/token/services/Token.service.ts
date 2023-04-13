@@ -1,14 +1,17 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Token } from '../../constants';
 import { ITokenPriceProvider } from '../providers/ITokenPrice.provider';
 import { GetTokenPricesResponse, TokenInfoType } from '../types';
 
 @Injectable()
 export class TokenService {
+  private readonly logger = new Logger(TokenService.name);
+
   private readonly PRICE_CACHE_KEY = 'tokenPrices';
-  private readonly PRICE_CACHE_TTL = 20000;
+  private readonly LAST_PRICE_KEY = 'lastTokenPrices';
+  private readonly PRICE_CACHE_TTL = 10000;
 
   TOKENS: TokenInfoType = {
     [Token.BTC]: {
@@ -59,15 +62,25 @@ export class TokenService {
       return val;
     }
 
-    const tokenPrices = await this.tokenPriceProvider.getPrices(
-      Object.keys(this.TOKENS) as Token[],
-    );
+    let tokenPrices: GetTokenPricesResponse;
+
+    try {
+      tokenPrices = await this.tokenPriceProvider.getPrices(
+        Object.keys(this.TOKENS) as Token[],
+      );
+    } catch (e) {
+      this.logger.error(e);
+      // TODO: send critical alert
+      return this.cacheManager.get(this.LAST_PRICE_KEY);
+    }
 
     await this.cacheManager.set(
       this.PRICE_CACHE_KEY,
       tokenPrices,
       this.PRICE_CACHE_TTL,
     );
+
+    await this.cacheManager.set(this.LAST_PRICE_KEY, tokenPrices, 0);
 
     return tokenPrices;
   }

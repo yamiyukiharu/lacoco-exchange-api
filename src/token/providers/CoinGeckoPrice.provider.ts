@@ -3,6 +3,7 @@ import { Token } from '../../constants';
 import { ITokenPriceProvider } from './ITokenPrice.provider';
 import { CoinGeckoPriceResponse, GetTokenPricesResponse } from '../types';
 import { HttpService } from '@nestjs/axios';
+import { retryOnFail } from '../../utils/retry';
 
 @Injectable()
 export class CoinGeckoPriceProvider extends ITokenPriceProvider {
@@ -40,12 +41,12 @@ export class CoinGeckoPriceProvider extends ITokenPriceProvider {
     const fullUrl = this.BASE_URL + this.PRICE_ENDPOINT;
 
     try {
-      const response =
-        await this.httpService.axiosRef.get<CoinGeckoPriceResponse>(fullUrl, {
+      const request = () =>
+        this.httpService.axiosRef.get<CoinGeckoPriceResponse>(fullUrl, {
           params,
         });
 
-      const prices = response.data;
+      const { data: prices } = await retryOnFail(request, 3);
 
       return tokens.reduce((acc, token) => {
         const tokenPrice = prices[this.TOKEN_MAPPING[token]];

@@ -55,7 +55,7 @@ describe('TokenService', () => {
     let prices = await service.getPrices();
 
     expect(mockCacheManager.get).toBeCalledTimes(1);
-    expect(mockCacheManager.set).toBeCalledTimes(1);
+    expect(mockCacheManager.set).toBeCalledTimes(2);
     expect(prices).toStrictEqual(res);
 
     mockCacheManager.get.mockResolvedValue(res);
@@ -63,7 +63,17 @@ describe('TokenService', () => {
     prices = await service.getPrices();
 
     expect(mockCacheManager.get).toBeCalledTimes(2);
-    expect(mockCacheManager.set).toBeCalledTimes(1);
+    expect(mockCacheManager.set).toBeCalledTimes(2);
     expect(prices).toStrictEqual(res);
+  });
+
+  it('can get the last token prices from cache when token price provider fails', async () => {
+    mockTokenPriceProvider.getPrices.mockRejectedValue(new Error('error'));
+
+    await service.getPrices();
+
+    expect(mockCacheManager.get.mock.calls[1][0]).toStrictEqual(
+      'lastTokenPrices',
+    );
   });
 });
